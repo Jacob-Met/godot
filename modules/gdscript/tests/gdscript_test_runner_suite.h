@@ -64,6 +64,8 @@ TEST_CASE("[Modules][GDScript] Exported array literal defaults use their declare
 	const String source = R"(extends Resource
 @export var packed_ints: PackedInt32Array = []
 @export var packed_floats: PackedFloat32Array = [1.0, 2.0]
+@export var packed_strings: PackedStringArray = ["alpha", "beta"]
+@export var packed_colors: PackedColorArray = []
 @export var typed_ints: Array[int] = []
 )";
 	REQUIRE(parser.parse(source, "res://exported_array_defaults.gd", false) == OK);
@@ -78,9 +80,13 @@ TEST_CASE("[Modules][GDScript] Exported array literal defaults use their declare
 	}
 	const Variant *packed_ints = defaults.getptr(SNAME("packed_ints"));
 	const Variant *packed_floats = defaults.getptr(SNAME("packed_floats"));
+	const Variant *packed_strings = defaults.getptr(SNAME("packed_strings"));
+	const Variant *packed_colors = defaults.getptr(SNAME("packed_colors"));
 	const Variant *typed_ints = defaults.getptr(SNAME("typed_ints"));
 	REQUIRE(packed_ints != nullptr);
 	REQUIRE(packed_floats != nullptr);
+	REQUIRE(packed_strings != nullptr);
+	REQUIRE(packed_colors != nullptr);
 	REQUIRE(typed_ints != nullptr);
 	CHECK(packed_ints->get_type() == Variant::PACKED_INT32_ARRAY);
 	CHECK(*packed_ints == Variant(PackedInt32Array()));
@@ -89,6 +95,13 @@ TEST_CASE("[Modules][GDScript] Exported array literal defaults use their declare
 	expected_floats.push_back(1.0f);
 	expected_floats.push_back(2.0f);
 	CHECK(*packed_floats == Variant(expected_floats));
+	CHECK(packed_strings->get_type() == Variant::PACKED_STRING_ARRAY);
+	PackedStringArray expected_strings;
+	expected_strings.push_back("alpha");
+	expected_strings.push_back("beta");
+	CHECK(*packed_strings == Variant(expected_strings));
+	CHECK(packed_colors->get_type() == Variant::PACKED_COLOR_ARRAY);
+	CHECK(*packed_colors == Variant(PackedColorArray()));
 	CHECK(typed_ints->get_type() == Variant::ARRAY);
 	const Array typed_array = *typed_ints;
 	CHECK(typed_array.get_typed_builtin() == Variant::INT);
