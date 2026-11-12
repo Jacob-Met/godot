@@ -233,6 +233,14 @@ protected:
 	static void _bind_methods();
 
 public:
+	// Temporarily release mutexes registered with an unlock allowance zone.
+	// Restore the previous lock state when the blocking operation completes.
+	class ScopedUnlockableMutexes {
+	public:
+		ScopedUnlockableMutexes() { WorkerThreadPool::get_singleton()->_unlock_unlockable_mutexes(); }
+		~ScopedUnlockableMutexes() { WorkerThreadPool::get_singleton()->_lock_unlockable_mutexes(); }
+	};
+
 	template <typename C, typename M, typename U>
 	TaskID add_template_task(C *p_instance, M p_method, U p_userdata, bool p_high_priority = false, const String &p_description = String()) {
 		typedef TaskUserData<C, M, U> TUD;
