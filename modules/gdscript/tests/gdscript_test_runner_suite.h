@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "../gdscript_analyzer.h"
 #include "../gdscript_cache.h"
 #include "../gdscript_parser.h"
 #include "gdscript_test_runner.h"
@@ -58,6 +59,41 @@ public:
 
 // TODO: Handle some cases failing on release builds. See: https://github.com/godotengine/godot/pull/88452
 #ifdef TOOLS_ENABLED
+TEST_CASE("[Modules][GDScript] Exported array literal defaults use their declared types") {
+	GDScriptParser parser;
+	const String source = R"(extends Resource
+@export var packed_ints: PackedInt32Array = []
+@export var packed_floats: PackedFloat32Array = [1.0, 2.0]
+@export var typed_ints: Array[int] = []
+)";
+	REQUIRE(parser.parse(source, "res://exported_array_defaults.gd", false) == OK);
+	GDScriptAnalyzer analyzer(&parser);
+	REQUIRE(analyzer.analyze() == OK);
+
+	HashMap<StringName, Variant> defaults;
+	for (const GDScriptParser::ClassNode::Member &member : parser.get_tree()->members) {
+		if (member.type == GDScriptParser::ClassNode::Member::VARIABLE) {
+			defaults[member.variable->identifier->name] = analyzer.make_variable_default_value(member.variable);
+		}
+	}
+	const Variant *packed_ints = defaults.getptr(SNAME("packed_ints"));
+	const Variant *packed_floats = defaults.getptr(SNAME("packed_floats"));
+	const Variant *typed_ints = defaults.getptr(SNAME("typed_ints"));
+	REQUIRE(packed_ints != nullptr);
+	REQUIRE(packed_floats != nullptr);
+	REQUIRE(typed_ints != nullptr);
+	CHECK(packed_ints->get_type() == Variant::PACKED_INT32_ARRAY);
+	CHECK(*packed_ints == Variant(PackedInt32Array()));
+	CHECK(packed_floats->get_type() == Variant::PACKED_FLOAT32_ARRAY);
+	PackedFloat32Array expected_floats;
+	expected_floats.push_back(1.0f);
+	expected_floats.push_back(2.0f);
+	CHECK(*packed_floats == Variant(expected_floats));
+	CHECK(typed_ints->get_type() == Variant::ARRAY);
+	const Array typed_array = *typed_ints;
+	CHECK(typed_array.get_typed_builtin() == Variant::INT);
+}
+
 TEST_SUITE("[Modules][GDScript]") {
 	TEST_CASE("Script compilation and runtime") {
 		bool print_filenames = OS::get_singleton()->get_cmdline_args().find("--print-filenames") != nullptr;
