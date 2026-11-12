@@ -489,6 +489,7 @@ void ResourceLoader::_run_load_task(void *p_userdata) {
 				// This is not the most optimal thing to do, but it is safe. Either the
 				// dependency will complete soon, or will block soon when we can safely
 				// yield.
+				WorkerThreadPool::ScopedUnlockableMutexes unlockable_mutexes;
 				OS::get_singleton()->delay_usec(1000);
 			}
 		} while (wait && status == THREAD_LOAD_IN_PROGRESS && !cleaning_tasks);
@@ -1141,12 +1142,15 @@ Ref<Resource> ResourceLoader::_load_complete_inner(LoadToken &p_load_token, Erro
 					if (!import_thread) { // Main thread is blocked by initial resource reimport, do not wait.
 						CoreBind::Semaphore done;
 						MessageQueue::get_main_singleton()->push_callable(callable_mp(&done, &CoreBind::Semaphore::post).bind(1));
+						// The main thread may need a mutex held by the awaiting script compiler.
+						WorkerThreadPool::ScopedUnlockableMutexes unlockable_mutexes;
 						done.wait();
 					}
 				}
 			}
 
 			p_thread_load_lock.temp_relock();
+			load_task_ptr->resource_changed_connections.clear();
 		}
 	}
 
