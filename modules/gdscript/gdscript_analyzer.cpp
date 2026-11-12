@@ -5479,7 +5479,11 @@ Variant GDScriptAnalyzer::make_call_reduced_value(GDScriptParser::CallNode *p_ca
 		} else if (p_call->function_name == SNAME("Dictionary")) {
 			type = Variant::DICTIONARY;
 		} else {
-			return Variant();
+			// Packed array constructors are pure and can be evaluated as defaults.
+			type = GDScriptParser::get_builtin_type(p_call->function_name);
+			if (type < Variant::PACKED_BYTE_ARRAY || type > Variant::PACKED_VECTOR4_ARRAY) {
+				return Variant();
+			}
 		}
 
 		Vector<Variant> args;

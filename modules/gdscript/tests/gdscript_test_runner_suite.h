@@ -66,6 +66,8 @@ TEST_CASE("[Modules][GDScript] Exported array literal defaults use their declare
 @export var packed_floats: PackedFloat32Array = [1.0, 2.0]
 @export var packed_strings: PackedStringArray = ["alpha", "beta"]
 @export var packed_colors: PackedColorArray = []
+@export var constructed_ints: PackedInt32Array = PackedInt32Array([2, 4])
+@export var constructed_floats: PackedFloat32Array = PackedFloat32Array()
 @export var typed_ints: Array[int] = []
 )";
 	REQUIRE(parser.parse(source, "res://exported_array_defaults.gd", false) == OK);
@@ -82,11 +84,15 @@ TEST_CASE("[Modules][GDScript] Exported array literal defaults use their declare
 	const Variant *packed_floats = defaults.getptr(SNAME("packed_floats"));
 	const Variant *packed_strings = defaults.getptr(SNAME("packed_strings"));
 	const Variant *packed_colors = defaults.getptr(SNAME("packed_colors"));
+	const Variant *constructed_ints = defaults.getptr(SNAME("constructed_ints"));
+	const Variant *constructed_floats = defaults.getptr(SNAME("constructed_floats"));
 	const Variant *typed_ints = defaults.getptr(SNAME("typed_ints"));
 	REQUIRE(packed_ints != nullptr);
 	REQUIRE(packed_floats != nullptr);
 	REQUIRE(packed_strings != nullptr);
 	REQUIRE(packed_colors != nullptr);
+	REQUIRE(constructed_ints != nullptr);
+	REQUIRE(constructed_floats != nullptr);
 	REQUIRE(typed_ints != nullptr);
 	CHECK(packed_ints->get_type() == Variant::PACKED_INT32_ARRAY);
 	CHECK(*packed_ints == Variant(PackedInt32Array()));
@@ -102,6 +108,13 @@ TEST_CASE("[Modules][GDScript] Exported array literal defaults use their declare
 	CHECK(*packed_strings == Variant(expected_strings));
 	CHECK(packed_colors->get_type() == Variant::PACKED_COLOR_ARRAY);
 	CHECK(*packed_colors == Variant(PackedColorArray()));
+	CHECK(constructed_ints->get_type() == Variant::PACKED_INT32_ARRAY);
+	PackedInt32Array expected_ints;
+	expected_ints.push_back(2);
+	expected_ints.push_back(4);
+	CHECK(*constructed_ints == Variant(expected_ints));
+	CHECK(constructed_floats->get_type() == Variant::PACKED_FLOAT32_ARRAY);
+	CHECK(*constructed_floats == Variant(PackedFloat32Array()));
 	CHECK(typed_ints->get_type() == Variant::ARRAY);
 	const Array typed_array = *typed_ints;
 	CHECK(typed_array.get_typed_builtin() == Variant::INT);
