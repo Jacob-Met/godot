@@ -1995,7 +1995,25 @@ TEST_CASE("[SceneTree][Viewport] Embedded Windows") {
 		CHECK(w->get_position() == Point2i(100, title_height));
 	}
 
-	memdelete(w);
+	SUBCASE("[Viewport] Deferred subwindow update after freeing the window") {
+		root->set_embedding_subwindows(true);
+		root->add_child(w);
+		w->show();
+
+		const float original_scale = root->get_content_scale_factor();
+		root->set_content_scale_factor(original_scale + 1.0f);
+		memdelete(w);
+		w = nullptr;
+
+		// Process the queued redraw after the window is gone.
+		SceneTree::get_singleton()->process(0);
+		CHECK(root->get_content_scale_factor() == original_scale + 1.0f);
+		root->set_content_scale_factor(original_scale);
+	}
+
+	if (w) {
+		memdelete(w);
+	}
 }
 
 } // namespace TestViewport
