@@ -361,6 +361,14 @@ void Viewport::_sub_window_register(Window *p_window) {
 	RenderingServer::get_singleton()->viewport_set_parent_viewport(p_window->viewport, viewport);
 }
 
+void Viewport::_sub_window_update_deferred(uint64_t p_window_id) {
+	// The window may have been freed after the deferred update was queued.
+	Window *window = ObjectDB::get_instance<Window>(ObjectID(p_window_id));
+	if (window) {
+		_sub_window_update(window);
+	}
+}
+
 void Viewport::_sub_window_update(Window *p_window) {
 	int index = _sub_window_find(p_window);
 
@@ -1106,7 +1114,7 @@ void Viewport::update_canvas_items() {
 			if (w.window && !w.pending_window_update) {
 				w.pending_window_update = true;
 				w.window->_update_viewport_size();
-				callable_mp(this, &Viewport::_sub_window_update).call_deferred(w.window);
+				callable_mp(this, &Viewport::_sub_window_update_deferred).call_deferred(w.window->get_instance_id());
 			}
 		}
 	}

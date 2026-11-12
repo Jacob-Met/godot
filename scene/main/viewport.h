@@ -499,6 +499,7 @@ private:
 	void _sub_window_update_order();
 	void _sub_window_register(Window *p_window);
 	void _sub_window_update(Window *p_window);
+	void _sub_window_update_deferred(uint64_t p_window_id);
 	void _sub_window_grab_focus(Window *p_window);
 	void _sub_window_remove(Window *p_window);
 	int _sub_window_find(Window *p_window) const;
