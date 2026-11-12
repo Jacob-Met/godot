@@ -5397,7 +5397,7 @@ Variant GDScriptAnalyzer::make_array_reduced_value(GDScriptParser::ArrayNode *p_
 			return Variant();
 		}
 
-		array[i] = element_value;
+		array.set(i, element_value);
 	}
 
 	array.make_read_only();
@@ -5424,7 +5424,9 @@ Variant GDScriptAnalyzer::make_dictionary_reduced_value(GDScriptParser::Dictiona
 			return Variant();
 		}
 
-		dictionary[element_key] = element_value;
+		if (!dictionary.set(element_key, element_value)) {
+			return Variant();
+		}
 	}
 
 	dictionary.make_read_only();
