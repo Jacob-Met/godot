@@ -57,6 +57,12 @@ class GodotPhysicsServer3D : public PhysicsServer3D {
 	HashSet<GodotSpace3D *> active_spaces;
 	// Maps an excepted body to the bodies that reference it, for cleanup when it is freed.
 	HashMap<RID, HashSet<RID>> collision_exception_sources;
+	struct CollisionExceptionOwners {
+		bool explicit_exception = false;
+		uint32_t joint_count = 0;
+	};
+	// A collision pair remains excluded while either a user or any joint needs it.
+	HashMap<RID, HashMap<RID, CollisionExceptionOwners>> collision_exception_owners;
 
 	mutable RID_PtrOwner<GodotShape3D, true> shape_owner;
 	mutable RID_PtrOwner<GodotSpace3D, true> space_owner;
@@ -69,6 +75,7 @@ class GodotPhysicsServer3D : public PhysicsServer3D {
 	friend class GodotCollisionObject3D;
 	SelfList<GodotCollisionObject3D>::List pending_shape_update_list;
 	void _update_shapes();
+	void _update_body_collision_exception(RID p_source, RID p_target, bool p_add, bool p_joint);
 	void _remove_collision_exception_references(RID p_rid, const VSet<RID> &p_exceptions);
 
 	static GodotPhysicsServer3D *godot_singleton;

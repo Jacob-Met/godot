@@ -862,27 +862,50 @@ bool GodotPhysicsServer3D::body_is_axis_locked(RID p_body, PS3DE::BodyAxis p_axi
 	return body->is_axis_locked(p_axis);
 }
 
-void GodotPhysicsServer3D::body_add_collision_exception(RID p_body, RID p_body_b) {
-	GodotBody3D *body = body_owner.get_or_null(p_body);
+void GodotPhysicsServer3D::_update_body_collision_exception(RID p_source, RID p_target, bool p_add, bool p_joint) {
+	GodotBody3D *body = body_owner.get_or_null(p_source);
 	ERR_FAIL_NULL(body);
 
-	body->add_exception(p_body_b);
-	collision_exception_sources[p_body_b].insert(p_body);
-	body->wakeup();
-}
-
-void GodotPhysicsServer3D::body_remove_collision_exception(RID p_body, RID p_body_b) {
-	GodotBody3D *body = body_owner.get_or_null(p_body);
-	ERR_FAIL_NULL(body);
-
-	body->remove_exception(p_body_b);
-	if (HashSet<RID> *sources = collision_exception_sources.getptr(p_body_b)) {
-		sources->erase(p_body);
-		if (sources->is_empty()) {
-			collision_exception_sources.erase(p_body_b);
+	if (p_add) {
+		CollisionExceptionOwners &owners = collision_exception_owners[p_source][p_target];
+		if (p_joint) {
+			owners.joint_count++;
+		} else {
+			owners.explicit_exception = true;
+		}
+		body->add_exception(p_target);
+		collision_exception_sources[p_target].insert(p_source);
+	} else if (HashMap<RID, CollisionExceptionOwners> *targets = collision_exception_owners.getptr(p_source)) {
+		if (CollisionExceptionOwners *owners = targets->getptr(p_target)) {
+			if (p_joint && owners->joint_count > 0) {
+				owners->joint_count--;
+			} else if (!p_joint) {
+				owners->explicit_exception = false;
+			}
+			if (!owners->explicit_exception && owners->joint_count == 0) {
+				targets->erase(p_target);
+				if (targets->is_empty()) {
+					collision_exception_owners.erase(p_source);
+				}
+				body->remove_exception(p_target);
+				if (HashSet<RID> *sources = collision_exception_sources.getptr(p_target)) {
+					sources->erase(p_source);
+					if (sources->is_empty()) {
+						collision_exception_sources.erase(p_target);
+					}
+				}
+			}
 		}
 	}
 	body->wakeup();
+}
+
+void GodotPhysicsServer3D::body_add_collision_exception(RID p_body, RID p_body_b) {
+	_update_body_collision_exception(p_body, p_body_b, true, false);
+}
+
+void GodotPhysicsServer3D::body_remove_collision_exception(RID p_body, RID p_body_b) {
+	_update_body_collision_exception(p_body, p_body_b, false, false);
 }
 
 void GodotPhysicsServer3D::body_get_collision_exceptions(RID p_body, List<RID> *p_exceptions) {
@@ -1461,11 +1484,11 @@ void GodotPhysicsServer3D::joint_disable_collisions_between_bodies(RID p_joint, 
 		GodotBody3D *body_b = *(joint->get_body_ptr() + 1);
 
 		if (p_disable) {
-			body_add_collision_exception(body_a->get_self(), body_b->get_self());
-			body_add_collision_exception(body_b->get_self(), body_a->get_self());
+			_update_body_collision_exception(body_a->get_self(), body_b->get_self(), true, true);
+			_update_body_collision_exception(body_b->get_self(), body_a->get_self(), true, true);
 		} else {
-			body_remove_collision_exception(body_a->get_self(), body_b->get_self());
-			body_remove_collision_exception(body_b->get_self(), body_a->get_self());
+			_update_body_collision_exception(body_a->get_self(), body_b->get_self(), false, true);
+			_update_body_collision_exception(body_b->get_self(), body_a->get_self(), false, true);
 		}
 	}
 }
@@ -1647,12 +1670,20 @@ void GodotPhysicsServer3D::_remove_collision_exception_references(RID p_rid, con
 			if (GodotBody3D *body = body_owner.get_or_null(source_rid)) {
 				body->remove_exception(p_rid);
 				body->wakeup();
+				if (HashMap<RID, CollisionExceptionOwners> *targets = collision_exception_owners.getptr(source_rid)) {
+					targets->erase(p_rid);
+					if (targets->is_empty()) {
+						collision_exception_owners.erase(source_rid);
+					}
+				}
 			} else if (GodotSoftBody3D *soft_body = soft_body_owner.get_or_null(source_rid)) {
 				soft_body->remove_exception(p_rid);
 			}
 		}
 		collision_exception_sources.erase(p_rid);
 	}
+	// Remove all outgoing exception ownership for the freed source.
+	collision_exception_owners.erase(p_rid);
 	for (int i = 0; i < p_exceptions.size(); i++) {
 		const RID target_rid = p_exceptions[i];
 		if (HashSet<RID> *sources = collision_exception_sources.getptr(target_rid)) {
