@@ -52,9 +52,9 @@
 			</description>
 		</method>
 		<method name="get_collision_exceptions">
-			<return type="PhysicsBody3D[]" />
+			<return type="CollisionObject3D[]" />
 			<description>
-				Returns an array of nodes that were added as collision exceptions for this body.
+				Returns an array of collision objects that were added as collision exceptions for this body, including [PhysicsBody3D] and [Area3D] nodes.
 			</description>
 		</method>
 		<method name="get_collision_layer_value" qualifiers="const">

@@ -638,10 +638,14 @@ void GodotPhysicsServer3D::body_attach_object_instance_id(RID p_body, ObjectID p
 }
 
 ObjectID GodotPhysicsServer3D::body_get_object_instance_id(RID p_body) const {
-	GodotBody3D *body = body_owner.get_or_null(p_body);
-	ERR_FAIL_NULL_V(body, ObjectID());
-
-	return body->get_instance_id();
+	if (const GodotBody3D *body = body_owner.get_or_null(p_body)) {
+		return body->get_instance_id();
+	}
+	// Collision exceptions may also refer to areas, not just physics bodies.
+	if (const GodotArea3D *area = area_owner.get_or_null(p_body)) {
+		return area->get_instance_id();
+	}
+	ERR_FAIL_V_MSG(ObjectID(), "Invalid body or area RID.");
 }
 
 void GodotPhysicsServer3D::body_set_user_flags(RID p_body, uint32_t p_flags) {

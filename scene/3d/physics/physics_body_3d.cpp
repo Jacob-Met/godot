@@ -60,15 +60,17 @@ PhysicsBody3D::PhysicsBody3D(PS3DE::BodyMode p_mode) :
 	set_body_mode(p_mode);
 }
 
-TypedArray<PhysicsBody3D> PhysicsBody3D::get_collision_exceptions() {
+TypedArray<CollisionObject3D> PhysicsBody3D::get_collision_exceptions() {
 	List<RID> exceptions;
 	PhysicsServer3D::get_singleton()->body_get_collision_exceptions(get_rid(), &exceptions);
-	Array ret;
+	TypedArray<CollisionObject3D> ret;
 	for (const RID &body : exceptions) {
 		ObjectID instance_id = PhysicsServer3D::get_singleton()->body_get_object_instance_id(body);
 		Object *obj = ObjectDB::get_instance(instance_id);
-		PhysicsBody3D *physics_body = Object::cast_to<PhysicsBody3D>(obj);
-		ret.append(physics_body);
+		CollisionObject3D *collision_object = Object::cast_to<CollisionObject3D>(obj);
+		if (collision_object != nullptr) {
+			ret.append(collision_object);
+		}
 	}
 	return ret;
 }

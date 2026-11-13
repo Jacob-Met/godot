@@ -658,10 +658,14 @@ void JoltPhysicsServer3D::body_attach_object_instance_id(RID p_body, ObjectID p_
 }
 
 ObjectID JoltPhysicsServer3D::body_get_object_instance_id(RID p_body) const {
-	const JoltBody3D *body = body_owner.get_or_null(p_body);
-	ERR_FAIL_NULL_V(body, ObjectID());
-
-	return body->get_instance_id();
+	if (const JoltBody3D *body = body_owner.get_or_null(p_body)) {
+		return body->get_instance_id();
+	}
+	// Collision exceptions may also refer to areas, not just physics bodies.
+	if (const JoltArea3D *area = area_owner.get_or_null(p_body)) {
+		return area->get_instance_id();
+	}
+	ERR_FAIL_V_MSG(ObjectID(), "Invalid body or area RID.");
 }
 
 void JoltPhysicsServer3D::body_set_enable_continuous_collision_detection(RID p_body, bool p_enable) {

@@ -63,7 +63,7 @@ public:
 	virtual Vector3 get_angular_velocity() const;
 	virtual real_t get_inverse_mass() const;
 
-	TypedArray<PhysicsBody3D> get_collision_exceptions();
+	TypedArray<CollisionObject3D> get_collision_exceptions();
 	void add_collision_exception_with(RequiredParam<Node> p_node); //must be physicsbody
 	void remove_collision_exception_with(RequiredParam<Node> p_node);
 };
