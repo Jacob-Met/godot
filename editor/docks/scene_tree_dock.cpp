@@ -2394,6 +2394,16 @@ void SceneTreeDock::perform_node_renames(Node *p_base, HashMap<Node *, NodePath>
 									ran.erase(i); //byebye channel
 
 								} else {
+									// A unique node path remains valid when only its ancestors are renamed.
+									// Keep it instead of unnecessarily changing shared Animation resources.
+									if (track_np.get_name_count() == 1 &&
+											String(track_np.get_name(0)).begins_with("%") &&
+											n->is_unique_name_in_owner() &&
+											found_path->value.get_name_count() > 0 &&
+											found_path->value.get_name(found_path->value.get_name_count() - 1) == n->get_name()) {
+										continue;
+									}
+
 									//will be renamed
 									NodePath rel_path = new_root_path.rel_path_to(found_path->value);
 
