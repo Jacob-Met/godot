@@ -1285,6 +1285,7 @@ void JoltPhysicsServer3D::joint_clear(RID p_joint) {
 	ERR_FAIL_NULL(joint);
 
 	if (joint->get_type() != PS3DE::JOINT_TYPE_MAX) {
+		joint->set_collision_disabled(false);
 		JoltJoint3D *empty_joint = memnew(JoltJoint3D);
 		empty_joint->set_rid(joint->get_rid());
 
@@ -1789,6 +1790,7 @@ void JoltPhysicsServer3D::free_shape(JoltShape3D *p_shape) {
 void JoltPhysicsServer3D::free_joint(JoltJoint3D *p_joint) {
 	ERR_FAIL_NULL(p_joint);
 
+	p_joint->set_collision_disabled(false);
 	joint_owner.free(p_joint->get_rid());
 	memdelete(p_joint);
 }

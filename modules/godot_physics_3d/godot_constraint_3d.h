@@ -51,7 +51,8 @@ protected:
 		_body_count = p_body_count;
 		island_step = 0;
 		priority = 1;
-		disabled_collisions_between_bodies = true;
+		// No exclusions exist until a joint explicitly disables body collisions.
+		disabled_collisions_between_bodies = false;
 	}
 
 public:

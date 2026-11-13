@@ -144,6 +144,49 @@ TEST_CASE("[SceneTree][PhysicsServer3D] Freeing an area clears body and soft bod
 	server->free_rid(soft_body);
 }
 
+TEST_CASE("[SceneTree][PhysicsServer3D] Clearing or freeing a joint restores body collisions") {
+	PhysicsServer3D *server = PhysicsServer3D::get_singleton();
+	REQUIRE(server != nullptr);
+
+	const RID a = server->body_create();
+	const RID b = server->body_create();
+
+	RID joint = server->joint_create();
+	server->joint_make_pin(joint, a, Vector3(), b, Vector3());
+	server->joint_disable_collisions_between_bodies(joint, true);
+	server->joint_disable_collisions_between_bodies(joint, true);
+	List<RID> before;
+	server->body_get_collision_exceptions(a, &before);
+	CHECK(before.size() == 1);
+	server->free_rid(joint);
+
+	List<RID> after_free;
+	server->body_get_collision_exceptions(a, &after_free);
+	CHECK(after_free.is_empty());
+
+	joint = server->joint_create();
+	server->joint_make_pin(joint, a, Vector3(), b, Vector3());
+	server->joint_disable_collisions_between_bodies(joint, true);
+	server->joint_clear(joint);
+
+	List<RID> after_clear;
+	server->body_get_collision_exceptions(a, &after_clear);
+	CHECK(after_clear.is_empty());
+	server->free_rid(joint);
+
+	server->body_add_collision_exception(a, b);
+	joint = server->joint_create();
+	server->joint_make_pin(joint, a, Vector3(), b, Vector3());
+	server->joint_disable_collisions_between_bodies(joint, false);
+	server->free_rid(joint);
+	List<RID> manual;
+	server->body_get_collision_exceptions(a, &manual);
+	CHECK(manual.size() == 1);
+
+	server->free_rid(a);
+	server->free_rid(b);
+}
+
 TEST_CASE("[SceneTree][PhysicsServer3D] Area collision exceptions return the live area node") {
 	Area3D *area = memnew(Area3D);
 	StaticBody3D *body = memnew(StaticBody3D);

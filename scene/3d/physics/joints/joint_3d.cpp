@@ -55,8 +55,8 @@ void Joint3D::_body_exit_tree() {
 
 void Joint3D::_update_joint(bool p_only_free) {
 	if (ba.is_valid() && bb.is_valid()) {
-		PhysicsServer3D::get_singleton()->body_remove_collision_exception(ba, bb);
-		PhysicsServer3D::get_singleton()->body_remove_collision_exception(bb, ba);
+		// Remove only the exclusion owned by this joint, not a user's separate one.
+		PhysicsServer3D::get_singleton()->joint_disable_collisions_between_bodies(joint, false);
 	}
 
 	ba = RID();

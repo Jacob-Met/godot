@@ -212,6 +212,10 @@ void JoltJoint3D::set_solver_position_iterations(int p_iterations) {
 }
 
 void JoltJoint3D::set_collision_disabled(bool p_disabled) {
+	// Toggling the same value twice must not add another exclusion or consume one.
+	if (collision_disabled == p_disabled) {
+		return;
+	}
 	collision_disabled = p_disabled;
 
 	if (body_a == nullptr || body_b == nullptr) {

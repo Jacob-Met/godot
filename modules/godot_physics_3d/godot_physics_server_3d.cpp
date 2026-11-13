@@ -1273,6 +1273,7 @@ void GodotPhysicsServer3D::joint_clear(RID p_joint) {
 	GodotJoint3D *joint = joint_owner.get_or_null(p_joint);
 	ERR_FAIL_NULL(joint);
 	if (joint->get_type() != PS3DE::JOINT_TYPE_MAX) {
+		joint_disable_collisions_between_bodies(p_joint, false);
 		GodotJoint3D *empty_joint = memnew(GodotJoint3D);
 		empty_joint->copy_settings_from(joint);
 
@@ -1449,6 +1450,10 @@ void GodotPhysicsServer3D::joint_disable_collisions_between_bodies(RID p_joint, 
 	GodotJoint3D *joint = joint_owner.get_or_null(p_joint);
 	ERR_FAIL_NULL(joint);
 
+	// Only transition the joint's own collision exclusion.
+	if (joint->is_disabled_collisions_between_bodies() == p_disable) {
+		return;
+	}
 	joint->disable_collisions_between_bodies(p_disable);
 
 	if (2 == joint->get_body_count()) {
@@ -1723,6 +1728,7 @@ void GodotPhysicsServer3D::free_rid(RID p_rid) {
 		memdelete(space);
 	} else if (joint_owner.owns(p_rid)) {
 		GodotJoint3D *joint = joint_owner.get_or_null(p_rid);
+		joint_disable_collisions_between_bodies(p_rid, false);
 
 		joint_owner.free(p_rid);
 		memdelete(joint);
