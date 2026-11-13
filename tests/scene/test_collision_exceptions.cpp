@@ -94,6 +94,30 @@ TEST_CASE("[SceneTree][PhysicsServer3D] Freeing bodies removes incoming collisio
 																									CHECK(remaining.is_empty());
 																			server->free_rid(c);
 }
+TEST_CASE("[SceneTree][PhysicsServer3D] Soft body exceptions are removed when either endpoint is freed") {
+	PhysicsServer3D *server = PhysicsServer3D::get_singleton();
+	REQUIRE(server != nullptr);
+
+	const RID body_a = server->body_create();
+	const RID soft_a = server->soft_body_create();
+	server->soft_body_add_collision_exception(soft_a, body_a);
+	server->soft_body_add_collision_exception(soft_a, body_a);
+	server->free_rid(body_a);
+	List<RID> soft_exceptions;
+	server->soft_body_get_collision_exceptions(soft_a, &soft_exceptions);
+	CHECK(soft_exceptions.is_empty());
+	server->free_rid(soft_a);
+
+	const RID body_b = server->body_create();
+	const RID soft_b = server->soft_body_create();
+	server->body_add_collision_exception(body_b, soft_b);
+	server->free_rid(soft_b);
+	List<RID> body_exceptions;
+	server->body_get_collision_exceptions(body_b, &body_exceptions);
+	CHECK(body_exceptions.is_empty());
+	server->free_rid(body_b);
+}
+
 #endif
 
 } // namespace TestCollisionExceptions

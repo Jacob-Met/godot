@@ -1052,6 +1052,7 @@ void GodotPhysicsServer3D::soft_body_add_collision_exception(RID p_body, RID p_b
 	ERR_FAIL_NULL(soft_body);
 
 	soft_body->add_exception(p_body_b);
+	collision_exception_sources[p_body_b].insert(p_body);
 }
 
 void GodotPhysicsServer3D::soft_body_remove_collision_exception(RID p_body, RID p_body_b) {
@@ -1059,6 +1060,12 @@ void GodotPhysicsServer3D::soft_body_remove_collision_exception(RID p_body, RID 
 	ERR_FAIL_NULL(soft_body);
 
 	soft_body->remove_exception(p_body_b);
+	if (HashSet<RID> *sources = collision_exception_sources.getptr(p_body_b)) {
+		sources->erase(p_body);
+		if (sources->is_empty()) {
+			collision_exception_sources.erase(p_body_b);
+		}
+	}
 }
 
 void GodotPhysicsServer3D::soft_body_get_collision_exceptions(RID p_body, List<RID> *p_exceptions) {
@@ -1622,6 +1629,32 @@ Quaternion GodotPhysicsServer3D::generic_6dof_joint_get_angular_target_rotation(
 	return Quaternion();
 }
 
+void GodotPhysicsServer3D::_remove_collision_exception_references(RID p_rid, const VSet<RID> &p_exceptions) {
+	if (const HashSet<RID> *sources = collision_exception_sources.getptr(p_rid)) {
+		for (const RID &source_rid : *sources) {
+			if (source_rid == p_rid) {
+				continue;
+			}
+			if (GodotBody3D *body = body_owner.get_or_null(source_rid)) {
+				body->remove_exception(p_rid);
+				body->wakeup();
+			} else if (GodotSoftBody3D *soft_body = soft_body_owner.get_or_null(source_rid)) {
+				soft_body->remove_exception(p_rid);
+			}
+		}
+		collision_exception_sources.erase(p_rid);
+	}
+	for (int i = 0; i < p_exceptions.size(); i++) {
+		const RID target_rid = p_exceptions[i];
+		if (HashSet<RID> *sources = collision_exception_sources.getptr(target_rid)) {
+			sources->erase(p_rid);
+			if (sources->is_empty()) {
+				collision_exception_sources.erase(target_rid);
+			}
+		}
+	}
+}
+
 void GodotPhysicsServer3D::free_rid(RID p_rid) {
 	_update_shapes(); //just in case
 
@@ -1638,27 +1671,7 @@ void GodotPhysicsServer3D::free_rid(RID p_rid) {
 	} else if (body_owner.owns(p_rid)) {
 		GodotBody3D *body = body_owner.get_or_null(p_rid);
 
-		// Drop incoming references while the other bodies are still valid.
-		if (const HashSet<RID> *sources = collision_exception_sources.getptr(p_rid)) {
-			for (const RID &source_rid : *sources) {
-				GodotBody3D *source = body_owner.get_or_null(source_rid);
-				if (source != nullptr && source != body) {
-					source->remove_exception(p_rid);
-					source->wakeup();
-				}
-			}
-			collision_exception_sources.erase(p_rid);
-		}
-		// Drop reverse references for the outgoing exceptions too.
-		for (int i = 0; i < body->get_exceptions().size(); i++) {
-			const RID target_rid = body->get_exceptions()[i];
-			if (HashSet<RID> *sources = collision_exception_sources.getptr(target_rid)) {
-				sources->erase(p_rid);
-				if (sources->is_empty()) {
-					collision_exception_sources.erase(target_rid);
-				}
-			}
-		}
+		_remove_collision_exception_references(p_rid, body->get_exceptions());
 
 		body->set_space(nullptr);
 
@@ -1670,6 +1683,8 @@ void GodotPhysicsServer3D::free_rid(RID p_rid) {
 		memdelete(body);
 	} else if (soft_body_owner.owns(p_rid)) {
 		GodotSoftBody3D *soft_body = soft_body_owner.get_or_null(p_rid);
+
+		_remove_collision_exception_references(p_rid, soft_body->get_exceptions());
 
 		soft_body->set_space(nullptr);
 

@@ -69,6 +69,7 @@ class GodotPhysicsServer3D : public PhysicsServer3D {
 	friend class GodotCollisionObject3D;
 	SelfList<GodotCollisionObject3D>::List pending_shape_update_list;
 	void _update_shapes();
+	void _remove_collision_exception_references(RID p_rid, const VSet<RID> &p_exceptions);
 
 	static GodotPhysicsServer3D *godot_singleton;
 

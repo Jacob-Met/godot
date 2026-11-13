@@ -31,6 +31,7 @@
 #pragma once
 
 #include "core/templates/hash_map.h"
+#include "core/templates/local_vector.h"
 #include "core/templates/rid_owner.h"
 #include "servers/physics_3d/physics_server_3d.h"
 
@@ -56,6 +57,7 @@ class JoltPhysicsServer3D final : public PhysicsServer3D {
 	mutable RID_PtrOwner<JoltJoint3D, true> joint_owner;
 
 	HashSet<JoltSpace3D *> active_spaces;
+	void _remove_collision_exception_references(RID p_rid, const LocalVector<RID> &p_exceptions);
 	// Bodies with a collision exception referencing each RID.
 	HashMap<RID, HashSet<RID>> collision_exception_sources;
 
