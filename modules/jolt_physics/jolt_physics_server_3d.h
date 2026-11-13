@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include "core/templates/hash_map.h"
 #include "core/templates/rid_owner.h"
 #include "servers/physics_3d/physics_server_3d.h"
 
@@ -55,6 +56,8 @@ class JoltPhysicsServer3D final : public PhysicsServer3D {
 	mutable RID_PtrOwner<JoltJoint3D, true> joint_owner;
 
 	HashSet<JoltSpace3D *> active_spaces;
+	// Bodies with a collision exception referencing each RID.
+	HashMap<RID, HashSet<RID>> collision_exception_sources;
 
 	JoltJobSystem *job_system = nullptr;
 	JoltTempAllocator *temp_allocator = nullptr;

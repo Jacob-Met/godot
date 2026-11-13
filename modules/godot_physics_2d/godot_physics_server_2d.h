@@ -35,6 +35,7 @@
 #include "godot_space_2d.h"
 #include "godot_step_2d.h"
 
+#include "core/templates/hash_map.h"
 #include "core/templates/rid_owner.h"
 #include "servers/physics_2d/physics_server_2d.h"
 
@@ -56,6 +57,8 @@ class GodotPhysicsServer2D : public PhysicsServer2D {
 
 	GodotStep2D *stepper = nullptr;
 	HashSet<GodotSpace2D *> active_spaces;
+	// Bodies with a collision exception referencing each RID.
+	HashMap<RID, HashSet<RID>> collision_exception_sources;
 
 	mutable RID_PtrOwner<GodotShape2D, true> shape_owner;
 	mutable RID_PtrOwner<GodotSpace2D, true> space_owner;

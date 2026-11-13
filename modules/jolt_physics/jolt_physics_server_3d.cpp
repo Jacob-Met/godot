@@ -879,7 +879,11 @@ void JoltPhysicsServer3D::body_add_collision_exception(RID p_body, RID p_excepte
 	JoltBody3D *body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL(body);
 
-	body->add_collision_exception(p_excepted_body);
+	// Collision exceptions are set-like in both physics engines.
+	if (!body->has_collision_exception(p_excepted_body)) {
+		body->add_collision_exception(p_excepted_body);
+		collision_exception_sources[p_excepted_body].insert(p_body);
+	}
 }
 
 void JoltPhysicsServer3D::body_remove_collision_exception(RID p_body, RID p_excepted_body) {
@@ -887,6 +891,14 @@ void JoltPhysicsServer3D::body_remove_collision_exception(RID p_body, RID p_exce
 	ERR_FAIL_NULL(body);
 
 	body->remove_collision_exception(p_excepted_body);
+	if (!body->has_collision_exception(p_excepted_body)) {
+		if (HashSet<RID> *sources = collision_exception_sources.getptr(p_excepted_body)) {
+			sources->erase(p_body);
+			if (sources->is_empty()) {
+				collision_exception_sources.erase(p_excepted_body);
+			}
+		}
+	}
 }
 
 void JoltPhysicsServer3D::body_get_collision_exceptions(RID p_body, List<RID> *p_exceptions) {
@@ -1707,6 +1719,27 @@ void JoltPhysicsServer3D::free_area(JoltArea3D *p_area) {
 
 void JoltPhysicsServer3D::free_body(JoltBody3D *p_body) {
 	ERR_FAIL_NULL(p_body);
+
+	const RID freed_rid = p_body->get_rid();
+	if (const HashSet<RID> *sources = collision_exception_sources.getptr(freed_rid)) {
+		for (const RID &source_rid : *sources) {
+			JoltBody3D *source = body_owner.get_or_null(source_rid);
+			if (source != nullptr && source != p_body) {
+				while (source->has_collision_exception(freed_rid)) {
+					source->remove_collision_exception(freed_rid);
+				}
+			}
+		}
+		collision_exception_sources.erase(freed_rid);
+	}
+	for (const RID &target_rid : p_body->get_collision_exceptions()) {
+		if (HashSet<RID> *sources = collision_exception_sources.getptr(target_rid)) {
+			sources->erase(freed_rid);
+			if (sources->is_empty()) {
+				collision_exception_sources.erase(target_rid);
+			}
+		}
+	}
 
 	p_body->set_space(nullptr);
 	body_owner.free(p_body->get_rid());

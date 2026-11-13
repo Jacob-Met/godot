@@ -35,6 +35,7 @@
 #include "godot_space_3d.h"
 #include "godot_step_3d.h"
 
+#include "core/templates/hash_map.h"
 #include "core/templates/rid_owner.h"
 #include "servers/physics_3d/physics_server_3d.h"
 
@@ -54,6 +55,8 @@ class GodotPhysicsServer3D : public PhysicsServer3D {
 
 	GodotStep3D *stepper = nullptr;
 	HashSet<GodotSpace3D *> active_spaces;
+	// Maps an excepted body to the bodies that reference it, for cleanup when it is freed.
+	HashMap<RID, HashSet<RID>> collision_exception_sources;
 
 	mutable RID_PtrOwner<GodotShape3D, true> shape_owner;
 	mutable RID_PtrOwner<GodotSpace3D, true> space_owner;
