@@ -879,11 +879,9 @@ void JoltPhysicsServer3D::body_add_collision_exception(RID p_body, RID p_excepte
 	JoltBody3D *body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL(body);
 
-	// Collision exceptions are set-like in both physics engines.
-	if (!body->has_collision_exception(p_excepted_body)) {
-		body->add_collision_exception(p_excepted_body);
-		collision_exception_sources[p_excepted_body].insert(p_body);
-	}
+	// Preserve Jolt's duplicate exceptions (multiple callers may add the same pair).
+	body->add_collision_exception(p_excepted_body);
+	collision_exception_sources[p_excepted_body].insert(p_body);
 }
 
 void JoltPhysicsServer3D::body_remove_collision_exception(RID p_body, RID p_excepted_body) {
