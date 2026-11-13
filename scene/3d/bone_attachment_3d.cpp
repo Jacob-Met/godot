@@ -132,8 +132,15 @@ void BoneAttachment3D::_check_bind() {
 	Skeleton3D *sk = get_skeleton();
 
 	if (sk && !bound) {
-		if (bone_idx <= -1) {
+		// The bone index belongs to a specific skeleton. A duplicated or reparented
+		// attachment may retain an index from a different skeleton with another
+		// bone order, so resolve the stored name before connecting.
+		if (!bone_name.is_empty()) {
 			bone_idx = sk->find_bone(bone_name);
+		} else if (bone_idx >= 0 && bone_idx < sk->get_bone_count()) {
+			bone_name = sk->get_bone_name(bone_idx);
+		} else {
+			bone_idx = -1;
 		}
 		if (bone_idx != -1) {
 			sk->connect(SceneStringName(skeleton_updated), callable_mp(this, &BoneAttachment3D::on_skeleton_update));
