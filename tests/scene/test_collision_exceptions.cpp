@@ -118,6 +118,28 @@ TEST_CASE("[SceneTree][PhysicsServer3D] Soft body exceptions are removed when ei
 	server->free_rid(body_b);
 }
 
+TEST_CASE("[SceneTree][PhysicsServer3D] Freeing an area removes body and soft body exceptions") {
+	PhysicsServer3D *server = PhysicsServer3D::get_singleton();
+	REQUIRE(server != nullptr);
+
+	const RID area = server->area_create();
+	const RID body = server->body_create();
+	const RID soft_body = server->soft_body_create();
+	server->body_add_collision_exception(body, area);
+	server->soft_body_add_collision_exception(soft_body, area);
+	server->free_rid(area);
+
+	List<RID> body_exceptions;
+	server->body_get_collision_exceptions(body, &body_exceptions);
+	CHECK(body_exceptions.is_empty());
+	List<RID> soft_exceptions;
+	server->soft_body_get_collision_exceptions(soft_body, &soft_exceptions);
+	CHECK(soft_exceptions.is_empty());
+
+	server->free_rid(body);
+	server->free_rid(soft_body);
+}
+
 #endif
 
 } // namespace TestCollisionExceptions

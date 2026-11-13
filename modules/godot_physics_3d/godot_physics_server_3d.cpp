@@ -1693,6 +1693,8 @@ void GodotPhysicsServer3D::free_rid(RID p_rid) {
 	} else if (area_owner.owns(p_rid)) {
 		GodotArea3D *area = area_owner.get_or_null(p_rid);
 
+		_remove_collision_exception_references(p_rid, VSet<RID>());
+
 		area->set_space(nullptr);
 
 		while (area->get_shape_count()) {

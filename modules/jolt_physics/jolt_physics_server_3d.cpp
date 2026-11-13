@@ -1719,6 +1719,8 @@ void JoltPhysicsServer3D::free_space(JoltSpace3D *p_space) {
 void JoltPhysicsServer3D::free_area(JoltArea3D *p_area) {
 	ERR_FAIL_NULL(p_area);
 
+	_remove_collision_exception_references(p_area->get_rid(), LocalVector<RID>());
+
 	p_area->set_space(nullptr);
 	area_owner.free(p_area->get_rid());
 	memdelete(p_area);
