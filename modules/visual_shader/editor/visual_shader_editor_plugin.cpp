@@ -2532,7 +2532,7 @@ void VisualShaderEditor::_resources_removed() {
 		}
 	}
 	if (has_any_instance) {
-		EditorUndoRedoManager::get_singleton()->clear_history(); // Need to clear undo history, otherwise it may lead to hard-detected errors and crashes (since the script was removed).
+		EditorUndoRedoManager::get_singleton()->clear_history(EditorUndoRedoManager::GLOBAL_HISTORY); // Visual shader actions use the global history; keep unsaved scenes intact.
 		if (visual_shader.is_valid()) {
 			ResourceSaver::save(visual_shader, visual_shader->get_path());
 		}
@@ -9078,7 +9078,7 @@ VisualShaderEditor::VisualShaderEditor() {
 VisualShaderEditor::~VisualShaderEditor() {
 	save_editor_layout();
 	if (EditorNode::get_editor_data().get_edited_scene_count() > 0) { // Avoid crash on shutdown.
-		EditorUndoRedoManager::get_singleton()->clear_history(); // To prevent undo on deleted graphs.
+		EditorUndoRedoManager::get_singleton()->clear_history(EditorUndoRedoManager::GLOBAL_HISTORY); // Prevent undo on deleted graphs without clearing scene changes.
 	}
 }
 
