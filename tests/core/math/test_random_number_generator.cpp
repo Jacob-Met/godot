@@ -271,4 +271,35 @@ TEST_CASE_MAY_FAIL("[RandomNumberGenerator] randi_range bias check") {
 	}
 }
 
+TEST_CASE("[RandomNumberGenerator] Integer 64-bit ranges") {
+	Ref<RandomNumberGenerator> rng = memnew(RandomNumberGenerator);
+	rng->set_seed(1);
+	bool below_32_bits = false;
+	bool above_32_bits = false;
+	for (int i = 0; i < 1000; i++) {
+		int64_t large = rng->randi_range(5'000'000'000LL, 5'000'000'010LL);
+		CHECK(large >= 5'000'000'000LL);
+		CHECK(large <= 5'000'000'010LL);
+		int64_t crossing = rng->randi_range(INT64_MIN, INT64_MAX);
+		CHECK(crossing >= INT64_MIN);
+		CHECK(crossing <= INT64_MAX);
+		below_32_bits |= crossing < INT32_MIN;
+		above_32_bits |= crossing > INT32_MAX;
+		int64_t reversed = rng->randi_range(3'000'000'000LL, 0LL);
+		CHECK(reversed >= 0);
+		CHECK(reversed <= 3'000'000'000LL);
+	}
+	CHECK(below_32_bits);
+	CHECK(above_32_bits);
+	CHECK(rng->randi_range(INT64_MIN, INT64_MIN) == INT64_MIN);
+	CHECK(rng->randi_range(INT64_MAX, INT64_MAX) == INT64_MAX);
+
+	// Ranges that fit in 32 bits must preserve the seeded legacy sequence.
+	RandomPCG narrow(1);
+	RandomPCG wide(1);
+	for (int i = 0; i < 1000; i++) {
+		CHECK(narrow.random(-50, 50) == wide.random64(int64_t(-50), int64_t(50)));
+	}
+}
+
 } // namespace TestRandomNumberGenerator

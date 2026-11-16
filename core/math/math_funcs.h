@@ -717,6 +717,7 @@ double randfn(double p_mean, double p_deviation);
 double random(double p_from, double p_to);
 float random(float p_from, float p_to);
 int random(int p_from, int p_to);
+int64_t random64(int64_t p_from, int64_t p_to);
 
 // This function should be as fast as possible and rounding mode should not matter.
 _ALWAYS_INLINE_ int fast_ftoi(float p_value) {

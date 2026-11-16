@@ -791,7 +791,7 @@ double VariantUtilityFunctions::randfn(double p_mean, double p_deviation) {
 }
 
 int64_t VariantUtilityFunctions::randi_range(int64_t p_from, int64_t p_to) {
-	return Math::random((int32_t)p_from, (int32_t)p_to);
+	return Math::random64(p_from, p_to);
 }
 
 double VariantUtilityFunctions::randf_range(double p_from, double p_to) {

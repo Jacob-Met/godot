@@ -128,4 +128,22 @@ TEST_CASE("[VariantUtility] Type conversion") {
 	}
 }
 
+TEST_CASE("[VariantUtility] Random integer 64-bit ranges") {
+	VariantUtilityFunctions::seed(1);
+	for (int i = 0; i < 1000; i++) {
+		int64_t large = VariantUtilityFunctions::randi_range(5'000'000'000LL, 5'000'000'010LL);
+		CHECK(large >= 5'000'000'000LL);
+		CHECK(large <= 5'000'000'010LL);
+		int64_t from_zero = VariantUtilityFunctions::randi_range(0, 3'000'000'000LL);
+		CHECK(from_zero >= 0);
+		CHECK(from_zero <= 3'000'000'000LL);
+		int64_t negative = VariantUtilityFunctions::randi_range(INT64_MIN, INT64_MIN + 10);
+		CHECK(negative >= INT64_MIN);
+		CHECK(negative <= INT64_MIN + 10);
+		int64_t crossing = VariantUtilityFunctions::randi_range(INT64_MIN, INT64_MAX);
+		CHECK(crossing >= INT64_MIN);
+		CHECK(crossing <= INT64_MAX);
+	}
+}
+
 } // namespace TestVariantUtility

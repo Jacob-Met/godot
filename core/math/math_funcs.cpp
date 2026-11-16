@@ -180,3 +180,7 @@ float Math::random(float p_from, float p_to) {
 int Math::random(int p_from, int p_to) {
 	return default_rand.random(p_from, p_to);
 }
+
+int64_t Math::random64(int64_t p_from, int64_t p_to) {
+	return default_rand.random64(p_from, p_to);
+}
