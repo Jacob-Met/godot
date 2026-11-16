@@ -100,18 +100,19 @@ void MovieWriter::get_supported_extensions(List<String> *r_extensions) const {
 	}
 }
 
-void MovieWriter::begin(const Size2i &p_movie_size, uint32_t p_fps, const String &p_base_path) {
+Error MovieWriter::begin(const Size2i &p_movie_size, uint32_t p_fps, const String &p_base_path) {
 	project_name = GLOBAL_GET("application/config/name");
 	movie_size = p_movie_size;
-
-	print_line(vformat(U"Movie Maker mode enabled, recording movie in %s×%s @ %d FPS...", movie_size.width, movie_size.height, p_fps));
 
 	// Check for available disk space and warn the user if needed.
 	String path = p_base_path.get_base_dir();
 	if (path.is_relative_path()) {
 		path = "res://" + path;
 	}
+	const Error dir_error = DirAccess::make_dir_recursive_absolute(path);
+	ERR_FAIL_COND_V_MSG(dir_error != OK, dir_error, vformat("Movie Maker could not create the output directory '%s' (error %d).", path, dir_error));
 	Ref<DirAccess> dir = DirAccess::open(path);
+	ERR_FAIL_COND_V_MSG(dir.is_null(), ERR_CANT_OPEN, vformat("Movie Maker could not open the output directory '%s'.", path));
 	if (dir->get_space_left() < 10 * Math::pow(1024.0, 3.0)) {
 		// Less than 10 GiB available.
 		WARN_PRINT(vformat("Current available space on disk is low (%s). MovieWriter will fail during movie recording if the disk runs out of available space.", String::humanize_size(dir->get_space_left())));
@@ -132,7 +133,11 @@ void MovieWriter::begin(const Size2i &p_movie_size, uint32_t p_fps, const String
 	audio_channels = AudioDriverDummy::get_dummy_singleton()->get_channels();
 	audio_mix_buffer.resize(mix_rate * audio_channels / fps);
 
-	write_begin(movie_size, p_fps, p_base_path);
+	const Error err = write_begin(movie_size, p_fps, p_base_path);
+	ERR_FAIL_COND_V_MSG(err != OK, err, vformat("Movie Maker could not start recording to '%s' (error %d).", p_base_path, err));
+	recording = true;
+	print_line(vformat(U"Movie Maker mode enabled, recording movie in %s×%s @ %d FPS...", movie_size.width, movie_size.height, p_fps));
+	return OK;
 }
 
 void MovieWriter::_bind_methods() {
@@ -184,6 +189,9 @@ void MovieWriter::set_extensions_hint() {
 }
 
 void MovieWriter::add_frame() {
+	if (!recording) {
+		return;
+	}
 	const int movie_time_seconds = Engine::get_singleton()->get_frames_drawn() / fps;
 	const int frame_remainder = Engine::get_singleton()->get_frames_drawn() % fps;
 	const String movie_time = vformat("%s:%s:%s:%s",
@@ -250,6 +258,10 @@ void MovieWriter::add_frame() {
 }
 
 void MovieWriter::end() {
+	if (!recording) {
+		return;
+	}
+	recording = false;
 	uint64_t encoding_start_usec = Time::get_singleton()->get_ticks_usec();
 	write_end();
 	uint64_t encoding_end_usec = Time::get_singleton()->get_ticks_usec();
