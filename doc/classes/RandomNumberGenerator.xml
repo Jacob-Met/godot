@@ -72,7 +72,7 @@
 			<param index="0" name="from" type="int" />
 			<param index="1" name="to" type="int" />
 			<description>
-				Returns a pseudo-random 32-bit signed integer between [param from] and [param to] (inclusive).
+				Returns a pseudo-random signed 64-bit integer between [param from] and [param to] (inclusive).
 			</description>
 		</method>
 		<method name="randomize">

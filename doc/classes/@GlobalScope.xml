@@ -1069,7 +1069,7 @@
 			<param index="0" name="from" type="int" />
 			<param index="1" name="to" type="int" />
 			<description>
-				Returns a random signed 32-bit integer between [param from] and [param to] (inclusive). If [param to] is lesser than [param from], they are swapped.
+				Returns a random signed 64-bit integer between [param from] and [param to] (inclusive). If [param to] is lesser than [param from], they are swapped.
 				[codeblocks]
 				[gdscript]
 				randi_range(0, 1)      # Returns either 0 or 1
