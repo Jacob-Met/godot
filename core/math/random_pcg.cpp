@@ -93,3 +93,34 @@ int RandomPCG::random(int p_from, int p_to) {
 
 	return static_cast<int64_t>(rand(diff + 1U)) + min;
 }
+
+int64_t RandomPCG::random64(int64_t p_from, int64_t p_to) {
+	if (p_from == p_to) {
+		return p_from;
+	}
+
+	const int64_t min = MIN(p_from, p_to);
+	const int64_t max = MAX(p_from, p_to);
+	const uint64_t diff = static_cast<uint64_t>(max) - static_cast<uint64_t>(min);
+	uint64_t offset;
+
+	if (diff < UINT32_MAX) {
+		// Keep the existing 32-bit sequence for ranges that fit in 32 bits.
+		offset = rand(static_cast<uint32_t>(diff + 1));
+	} else if (diff == UINT32_MAX) {
+		offset = rand();
+	} else {
+		// A zero span represents all 2^64 values, including both endpoints.
+		const uint64_t span = diff + 1;
+		const uint64_t threshold = span == 0 ? 0 : -span % span;
+		uint64_t value;
+		do {
+			const uint64_t high = rand();
+			value = (high << 32) | rand();
+		} while (value < threshold);
+		offset = span == 0 ? value : value % span;
+	}
+
+	// Unsigned arithmetic avoids overflow across the signed 64-bit boundary.
+	return static_cast<int64_t>(static_cast<uint64_t>(min) + offset);
+}

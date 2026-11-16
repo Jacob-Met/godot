@@ -137,4 +137,5 @@ public:
 	double random(double p_from, double p_to);
 	float random(float p_from, float p_to);
 	int random(int p_from, int p_to);
+	int64_t random64(int64_t p_from, int64_t p_to);
 };
