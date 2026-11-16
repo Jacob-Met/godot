@@ -38,6 +38,7 @@
 class MovieWriter : public Object {
 	GDCLASS(MovieWriter, Object);
 
+	bool recording = false;
 	uint64_t fps = 0;
 	uint64_t mix_rate = 0;
 	uint32_t audio_channels = 0;
@@ -87,7 +88,7 @@ public:
 	static void add_writer(MovieWriter *p_writer);
 	static MovieWriter *find_writer_for_file(const String &p_file);
 
-	void begin(const Size2i &p_movie_size, uint32_t p_fps, const String &p_base_path);
+	Error begin(const Size2i &p_movie_size, uint32_t p_fps, const String &p_base_path);
 	void add_frame();
 
 	static void set_extensions_hint();
