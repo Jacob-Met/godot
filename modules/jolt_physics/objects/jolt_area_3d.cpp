@@ -135,6 +135,33 @@ bool JoltArea3D::_remove_shape_pair(Overlap &p_overlap, const JPH::SubShapeID &p
 }
 
 void JoltArea3D::_flush_events(OverlapsById &p_objects, Callable &p_callback) {
+	struct PendingEvent {
+		RID rid;
+		ObjectID instance_id;
+		JPH::BodyID body_id;
+		ShapeIndexPair shape_indices;
+		PS3DE::AreaBodyStatus status;
+		bool canceled = false;
+	};
+
+	LocalVector<PendingEvent> pending_events;
+	HashMap<RID, HashMap<ShapeIndexPair, LocalVector<uint32_t>, ShapeIndexPair>> events_by_rid;
+
+	auto queue_event = [&](const JPH::BodyID &p_body_id, const Overlap &p_overlap, const ShapeIndexPair &p_shape_indices, PS3DE::AreaBodyStatus p_status) {
+		LocalVector<uint32_t> &matching = events_by_rid[p_overlap.rid][p_shape_indices];
+		for (uint32_t index : matching) {
+			PendingEvent &previous = pending_events[index];
+			if (!previous.canceled && previous.status != p_status && previous.body_id != p_body_id) {
+				// A Godot body can leave and re-enter the scene tree in one frame.
+				// Its new Jolt ID must not trigger another exit/enter for the same shape.
+				previous.canceled = true;
+				return;
+			}
+		}
+		matching.push_back(pending_events.size());
+		pending_events.push_back({ p_overlap.rid, p_overlap.instance_id, p_body_id, p_shape_indices, p_status });
+	};
+
 	for (OverlapsById::Iterator E = p_objects.begin(); E;) {
 		Overlap &overlap = E->value;
 
@@ -142,7 +169,7 @@ void JoltArea3D::_flush_events(OverlapsById &p_objects, Callable &p_callback) {
 			for (const ShapeIndexPair &shape_indices : overlap.pending_added) {
 				int &ref_count = overlap.ref_counts[shape_indices];
 				if (ref_count++ == 0) {
-					_report_event(p_callback, PS3DE::AREA_BODY_ADDED, overlap.rid, overlap.instance_id, shape_indices.other, shape_indices.self);
+					queue_event(E->key, overlap, shape_indices, PS3DE::AREA_BODY_ADDED);
 				}
 			}
 
@@ -150,7 +177,7 @@ void JoltArea3D::_flush_events(OverlapsById &p_objects, Callable &p_callback) {
 				int &ref_count = overlap.ref_counts[shape_indices];
 				ERR_CONTINUE(ref_count <= 0);
 				if (--ref_count == 0) {
-					_report_event(p_callback, PS3DE::AREA_BODY_REMOVED, overlap.rid, overlap.instance_id, shape_indices.other, shape_indices.self);
+					queue_event(E->key, overlap, shape_indices, PS3DE::AREA_BODY_REMOVED);
 					overlap.ref_counts.erase(shape_indices);
 				}
 			}
@@ -167,6 +194,12 @@ void JoltArea3D::_flush_events(OverlapsById &p_objects, Callable &p_callback) {
 		}
 
 		E = next;
+	}
+
+	for (const PendingEvent &event : pending_events) {
+		if (!event.canceled) {
+			_report_event(p_callback, event.status, event.rid, event.instance_id, event.shape_indices.other, event.shape_indices.self);
+		}
 	}
 }
 
