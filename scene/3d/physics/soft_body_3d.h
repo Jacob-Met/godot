@@ -92,6 +92,9 @@ private:
 	DisableMode disable_mode = DISABLE_MODE_REMOVE;
 
 	RID owned_mesh;
+	Ref<Mesh> rest_mesh;
+	Vector<Vector3> disabled_vertices;
+	bool physics_mesh_active = false;
 	uint32_t collision_mask = 1;
 	uint32_t collision_layer = 1;
 	NodePath parent_collision_ignore;
@@ -112,6 +115,7 @@ private:
 
 	void _prepare_physics_server();
 	void _become_mesh_owner();
+	void _normalize_render_transform();
 
 protected:
 	bool _set(const StringName &p_name, const Variant &p_value);
