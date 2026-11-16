@@ -442,6 +442,7 @@ void SoftBody3D::_draw_soft_mesh() {
 		_become_mesh_owner();
 		mesh_rid = mesh->get_rid();
 		PhysicsServer3D::get_singleton()->soft_body_set_mesh(physics_rid, mesh_rid);
+		physics_mesh_active = true;
 	}
 
 	if (!rendering_server_handler->is_ready(mesh_rid)) {
@@ -449,8 +450,7 @@ void SoftBody3D::_draw_soft_mesh() {
 
 		/// Necessary in order to render the mesh correctly (Soft body nodes are in global space)
 		simulation_started = true;
-		callable_mp((Node3D *)this, &Node3D::set_as_top_level).call_deferred(true);
-		callable_mp((Node3D *)this, &Node3D::set_transform).call_deferred(Transform3D());
+		callable_mp(this, &SoftBody3D::_normalize_render_transform).call_deferred();
 	}
 
 	_update_physics_server();
@@ -460,6 +460,15 @@ void SoftBody3D::_draw_soft_mesh() {
 	rendering_server_handler->close();
 
 	rendering_server_handler->commit_changes();
+}
+
+void SoftBody3D::_normalize_render_transform() {
+	// The physics points are already in world space. Changing the visual
+	// transform must not reset the physics mesh's rest constraints.
+	set_notify_transform(false);
+	set_as_top_level(true);
+	set_transform(Transform3D());
+	set_notify_transform(true);
 }
 
 void SoftBody3D::_prepare_physics_server() {
@@ -475,16 +484,39 @@ void SoftBody3D::_prepare_physics_server() {
 	}
 #endif
 
+	PhysicsServer3D *physics_server = PhysicsServer3D::get_singleton();
 	if (mesh.is_valid() && (is_enabled() || (disable_mode != DISABLE_MODE_REMOVE))) {
 		RID mesh_rid = mesh->get_rid();
-		if (owned_mesh != mesh_rid) {
+		const bool mesh_changed = owned_mesh != mesh_rid;
+		if (mesh_changed) {
 			_become_mesh_owner();
 			mesh_rid = mesh->get_rid();
 		}
-		PhysicsServer3D::get_singleton()->soft_body_set_mesh(physics_rid, mesh_rid);
-		RS::get_singleton()->connect("frame_pre_draw", callable_mp(this, &SoftBody3D::_draw_soft_mesh));
+
+		// Rebuild the original rest constraints, then restore the current shape.
+		// Rebuilding from the deformed rendering mesh compounds shrinking on each re-enable.
+		if (!physics_mesh_active || mesh_changed) {
+			const RID physics_mesh = disabled_vertices.is_empty() || rest_mesh.is_null() ? mesh_rid : rest_mesh->get_rid();
+			physics_server->soft_body_set_mesh(physics_rid, physics_mesh);
+			physics_mesh_active = true;
+		}
+		for (int i = 0; i < disabled_vertices.size(); i++) {
+			physics_server->soft_body_move_point(physics_rid, i, disabled_vertices[i]);
+		}
+		disabled_vertices.clear();
+		if (!RS::get_singleton()->is_connected("frame_pre_draw", callable_mp(this, &SoftBody3D::_draw_soft_mesh))) {
+			RS::get_singleton()->connect("frame_pre_draw", callable_mp(this, &SoftBody3D::_draw_soft_mesh));
+		}
 	} else {
-		PhysicsServer3D::get_singleton()->soft_body_set_mesh(physics_rid, RID());
+		if (physics_mesh_active && mesh.is_valid() && owned_mesh == mesh->get_rid()) {
+			disabled_vertices.resize(get_point_count());
+			for (int i = 0; i < disabled_vertices.size(); i++) {
+				disabled_vertices.write[i] = physics_server->soft_body_get_point_global_position(physics_rid, i);
+			}
+		}
+
+		physics_server->soft_body_set_mesh(physics_rid, RID());
+		physics_mesh_active = false;
 		if (RS::get_singleton()->is_connected("frame_pre_draw", callable_mp(this, &SoftBody3D::_draw_soft_mesh))) {
 			RS::get_singleton()->disconnect("frame_pre_draw", callable_mp(this, &SoftBody3D::_draw_soft_mesh));
 		}
@@ -496,6 +528,10 @@ void SoftBody3D::_become_mesh_owner() {
 	copy_materials.append_array(surface_override_materials);
 
 	ERR_FAIL_COND(!mesh->get_surface_count());
+
+	// Retain undeformed vertices for rest constraints across disable/enable cycles.
+	rest_mesh = mesh;
+	disabled_vertices.clear();
 
 	// Get current mesh array and create new mesh array with necessary flag for SoftBody
 	Array surface_arrays = mesh->surface_get_arrays(0);
